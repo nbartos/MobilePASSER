@@ -5,6 +5,7 @@ import base64
 import hashlib
 import hmac
 import sys
+import os
 
 from activationcode import ActivationCode
 
@@ -97,11 +98,25 @@ def generate_mobilepass_token(activation_key, index, policy=''):
 
         h = hmac.new(key, message, hashlib.sha256).hexdigest()
         h = truncated_value(h)
-        h = h % (10**6)
-        return '%0*d' % (6, h)
+        h = h % (10**8)
+        return '%0*d' % (8, h)
 
 if __name__ == '__main__':
-        key = "QVKYC-FM6KO-SY6F7-TR22W"
-        policy = ""
-        index = 0
-        print generate_mobilepass_token(key, index, policy)   # 374844
+    vals = {}
+    for v in ['key', 'policy', 'index']:
+        myfile = v + 'file'
+        vals[myfile] = os.path.join(os.environ.get('HOME', ''), '.vpn/mobilepass.%s' % v)
+
+        try:
+            with open(vals[myfile]) as f:
+                vals[v] = f.read().rstrip()
+        except IOError as e:
+            sys.stderr.write('Error opening %s: %s\n' % (vals[myfile], e))
+            sys.exit(1)
+
+    vals['index'] = int(vals['index'])
+
+    print generate_mobilepass_token(vals['key'], vals['index'], vals['policy'])
+
+    with open(vals['indexfile'], 'w') as f:
+        f.write('%d\n' % (vals['index'] + 1))
